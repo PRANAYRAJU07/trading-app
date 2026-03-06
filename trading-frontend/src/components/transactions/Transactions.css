@@ -1,0 +1,162 @@
+.transactions {
+    padding: var(--space-xl);
+    max-width: 1200px;
+    margin: 0 auto;
+    animation: fadeIn 0.5s ease-out;
+}
+
+.transactions-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    min-height: 60vh;
+    gap: var(--space-lg);
+}
+
+.transactions-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: var(--space-2xl);
+    gap: var(--space-xl);
+    flex-wrap: wrap;
+}
+
+.transactions-header h1 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+
+.transactions-header p {
+    color: var(--color-text-tertiary);
+    font-size: var(--font-size-lg);
+}
+
+.filter-buttons {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+.transactions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.transaction-card {
+    padding: var(--space-lg);
+    transition: all var(--transition-fast);
+}
+
+.transaction-card:hover {
+    transform: translateX(4px);
+    border-color: var(--color-primary);
+}
+
+.transaction-badge-wrapper {
+    margin-bottom: var(--space-md);
+}
+
+.transaction-content {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-lg);
+}
+
+.transaction-main {
+    flex: 1;
+}
+
+.transaction-main h3 {
+    font-size: var(--font-size-xl);
+    margin-bottom: var(--space-xs);
+    color: var(--color-primary);
+}
+
+.transaction-details {
+    font-size: var(--font-size-base);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.transaction-date {
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+}
+
+.transaction-amount-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: var(--space-sm);
+}
+
+.transaction-amount {
+    font-size: var(--font-size-2xl);
+    font-weight: 800;
+}
+
+.transaction-status {
+    font-size: var(--font-size-xs);
+}
+
+.empty-transactions {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-2xl);
+    text-align: center;
+    min-height: 400px;
+    gap: var(--space-lg);
+}
+
+.empty-transactions svg {
+    color: var(--color-text-muted);
+    opacity: 0.5;
+}
+
+.empty-transactions h3 {
+    font-size: var(--font-size-2xl);
+    color: var(--color-text-secondary);
+}
+
+.empty-transactions p {
+    color: var(--color-text-tertiary);
+}
+
+@media (max-width: 768px) {
+    .transactions {
+        padding: var(--space-md);
+    }
+
+    .transactions-header {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .filter-buttons {
+        width: 100%;
+        justify-content: stretch;
+    }
+
+    .filter-buttons .btn {
+        flex: 1;
+    }
+
+    .transaction-content {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+
+    .transaction-amount-wrapper {
+        width: 100%;
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
