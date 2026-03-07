@@ -18,11 +18,18 @@ const Dashboard = () => {
         fetchDashboardData();
     }, [user]);
 
-    const fetchDashboardData = async () => {
+    // Poll for updated stocks and portfolio every 60 seconds (silent refresh)
+    useEffect(() => {
+        if (!user) return;
+        const interval = setInterval(() => fetchDashboardData(false), 60000);
+        return () => clearInterval(interval);
+    }, [user]);
+
+    const fetchDashboardData = async (showLoading = true) => {
         if (!user) return;
 
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
 
             // Fetch portfolio value
             const valueResponse = await portfolioService.getPortfolioValue(user.username);

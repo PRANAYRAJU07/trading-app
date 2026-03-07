@@ -35,6 +35,26 @@
     font-size: var(--font-size-lg);
 }
 
+.market-header-actions {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+}
+
+.market-header-actions .search-box {
+    min-width: 220px;
+}
+
+.market-header-actions .btn svg.spin,
+.market-header-actions .btn .spin {
+    animation: spin 0.8s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
 .search-box {
     display: flex;
     align-items: center;

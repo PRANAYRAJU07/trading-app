@@ -4,6 +4,7 @@ import com.trading.dto.ApiResponse;
 import com.trading.dto.StockResponse;
 import com.trading.dto.alphavantage.StockPriceUpdate;
 import com.trading.service.AlphaVantageService;
+import com.trading.service.StockPriceRefreshService;
 import com.trading.service.StockService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -21,6 +22,7 @@ import java.util.List;
 public class StockController {
     private final StockService stockService;
     private final AlphaVantageService alphaVantageService;
+    private final StockPriceRefreshService stockPriceRefreshService;
 
     @Operation(summary = "Get all stocks", description = "Retrieve list of all available stocks with current prices")
     @GetMapping
@@ -66,14 +68,14 @@ public class StockController {
         }
     }
 
-    @Operation(summary = "Refresh all stock prices", description = "Fetch latest prices for all stocks from Alpha Vantage (Rate limited)")
+    @Operation(summary = "Refresh all stock prices", description = "Start background refresh from Alpha Vantage. Returns immediately; prices update in 1–2 min.")
     @PostMapping("/refresh-all")
     public ResponseEntity<ApiResponse> refreshAllStockPrices() {
         try {
-            List<StockPriceUpdate> updates = alphaVantageService.updateAllStockPrices();
-            return ResponseEntity.ok(
+            stockPriceRefreshService.refreshAllAsync();
+            return ResponseEntity.status(HttpStatus.ACCEPTED).body(
                     new ApiResponse(true,
-                            "Refreshed " + updates.size() + " stock prices", updates));
+                            "Price refresh started. Prices will update in 1–2 minutes.", null));
         } catch (Exception e) {
             return ResponseEntity.badRequest()
                     .body(new ApiResponse(false, e.getMessage()));

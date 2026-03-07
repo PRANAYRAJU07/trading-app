@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import stockService from '../../services/stockService';
 import tradingService from '../../services/tradingService';
 import toast from 'react-hot-toast';
-import { Search, TrendingUp, ShoppingCart, DollarSign } from 'lucide-react';
+import { Search, TrendingUp, ShoppingCart, DollarSign, RefreshCw } from 'lucide-react';
 import './Market.css';
 
 const Market = () => {
@@ -15,18 +15,25 @@ const Market = () => {
     const [selectedStock, setSelectedStock] = useState(null);
     const [quantity, setQuantity] = useState(1);
     const [buyingStock, setBuyingStock] = useState(false);
+    const [refreshingPrices, setRefreshingPrices] = useState(false);
 
     useEffect(() => {
         fetchStocks();
+    }, []);
+
+    // Poll for updated prices every 60 seconds (silent refresh, no loading spinner)
+    useEffect(() => {
+        const interval = setInterval(() => fetchStocks(false), 60000);
+        return () => clearInterval(interval);
     }, []);
 
     useEffect(() => {
         filterStocks();
     }, [searchTerm, stocks]);
 
-    const fetchStocks = async () => {
+    const fetchStocks = async (showLoading = true) => {
         try {
-            setLoading(true);
+            if (showLoading) setLoading(true);
             const response = await stockService.getAllStocks();
             if (response.success) {
                 setStocks(response.data || []);
@@ -37,6 +44,25 @@ const Market = () => {
             console.error(error);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const handleRefreshPrices = async () => {
+        try {
+            setRefreshingPrices(true);
+            const response = await stockService.refreshAllPrices();
+            if (response.success) {
+                toast.success('Price refresh started. Prices will update in 1–2 minutes.');
+                // Poll a bit more often for the next 2 minutes so user sees updates
+                const fastInterval = setInterval(() => fetchStocks(false), 15000);
+                setTimeout(() => clearInterval(fastInterval), 120000);
+            } else {
+                toast.error(response.message || 'Failed to start refresh');
+            }
+        } catch (error) {
+            toast.error(error.message || 'Failed to start refresh');
+        } finally {
+            setRefreshingPrices(false);
         }
     };
 
@@ -118,15 +144,27 @@ const Market = () => {
                     <p>Browse and trade available stocks</p>
                 </div>
 
-                <div className="search-box">
-                    <Search size={20} />
-                    <input
-                        type="text"
-                        placeholder="Search stocks by symbol or company..."
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
-                        className="search-input"
-                    />
+                <div className="market-header-actions">
+                    <div className="search-box">
+                        <Search size={20} />
+                        <input
+                            type="text"
+                            placeholder="Search stocks by symbol or company..."
+                            value={searchTerm}
+                            onChange={(e) => setSearchTerm(e.target.value)}
+                            className="search-input"
+                        />
+                    </div>
+                    <button
+                        type="button"
+                        className="btn btn-outline btn-sm"
+                        onClick={handleRefreshPrices}
+                        disabled={refreshingPrices}
+                        title="Fetch latest prices from market (updates in 1–2 min)"
+                    >
+                        <RefreshCw size={18} className={refreshingPrices ? 'spin' : ''} />
+                        {refreshingPrices ? 'Refreshing…' : 'Refresh prices'}
+                    </button>
                 </div>
             </div>
 

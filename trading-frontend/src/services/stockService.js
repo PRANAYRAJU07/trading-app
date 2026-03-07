@@ -20,6 +20,16 @@ const stockService = {
       throw error.response?.data || error;
     }
   },
+
+  // Trigger refresh of all stock prices from Alpha Vantage (runs in background; returns immediately)
+  refreshAllPrices: async () => {
+    try {
+      const response = await api.post('/stocks/refresh-all');
+      return response;
+    } catch (error) {
+      throw error.response?.data || error;
+    }
+  },
 };
 
 export default stockService;
