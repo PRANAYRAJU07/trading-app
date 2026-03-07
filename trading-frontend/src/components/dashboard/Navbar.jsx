@@ -1,16 +1,21 @@
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { TrendingUp, LogOut, User, Wallet } from 'lucide-react';
+import { TrendingUp, LogOut, User, Wallet, Menu, X } from 'lucide-react';
 import './Navbar.css';
 
 const Navbar = () => {
     const { user, logout } = useAuth();
     const navigate = useNavigate();
+    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
     const handleLogout = () => {
         logout();
+        setMobileMenuOpen(false);
         navigate('/login');
     };
+
+    const closeMobileMenu = () => setMobileMenuOpen(false);
 
     const formatBalance = (balance) => {
         return new Intl.NumberFormat('en-US', {
@@ -20,27 +25,44 @@ const Navbar = () => {
         }).format(balance);
     };
 
+    const navLinks = [
+        { to: '/dashboard', label: 'Dashboard' },
+        { to: '/market', label: 'Market' },
+        { to: '/portfolio', label: 'Portfolio' },
+        { to: '/transactions', label: 'Transactions' },
+    ];
+
     return (
         <nav className="navbar glass-card">
             <div className="navbar-container">
-                <Link to="/dashboard" className="navbar-brand">
+                <Link to="/dashboard" className="navbar-brand" onClick={closeMobileMenu}>
                     <TrendingUp size={32} />
                     <span>MRU Trading</span>
                 </Link>
 
-                <div className="navbar-links">
-                    <Link to="/dashboard" className="navbar-link">
-                        Dashboard
-                    </Link>
-                    <Link to="/market" className="navbar-link">
-                        Market
-                    </Link>
-                    <Link to="/portfolio" className="navbar-link">
-                        Portfolio
-                    </Link>
-                    <Link to="/transactions" className="navbar-link">
-                        Transactions
-                    </Link>
+                <button
+                    type="button"
+                    className="navbar-mobile-toggle"
+                    aria-label="Toggle menu"
+                    onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                >
+                    {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
+                </button>
+
+                {mobileMenuOpen && (
+                    <div
+                        className="navbar-overlay"
+                        aria-hidden="true"
+                        onClick={closeMobileMenu}
+                    />
+                )}
+
+                <div className={`navbar-links ${mobileMenuOpen ? 'navbar-links-open' : ''}`}>
+                    {navLinks.map(({ to, label }) => (
+                        <Link key={to} to={to} className="navbar-link" onClick={closeMobileMenu}>
+                            {label}
+                        </Link>
+                    ))}
                 </div>
 
                 <div className="navbar-user">
