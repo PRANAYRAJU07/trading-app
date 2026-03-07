@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, NavLink, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
 import { TrendingUp, LogOut, User, Wallet, Menu, X } from 'lucide-react';
 import './Navbar.css';
@@ -58,10 +58,36 @@ const Navbar = () => {
                 )}
 
                 <div className={`navbar-links ${mobileMenuOpen ? 'navbar-links-open' : ''}`}>
+                    <div className="navbar-mobile-header">
+                        <div className="navbar-mobile-user">
+                            <div className="navbar-profile">
+                                <User size={20} />
+                                <span>{user?.username}</span>
+                            </div>
+                            <div className="navbar-balance">
+                                <Wallet size={20} />
+                                <span className="balance-amount">{formatBalance(user?.balance || 0)}</span>
+                            </div>
+                        </div>
+
+                        <button onClick={handleLogout} className="btn btn-outline btn-sm navbar-mobile-logout">
+                            <LogOut size={16} />
+                            Logout
+                        </button>
+                    </div>
+
                     {navLinks.map(({ to, label }) => (
-                        <Link key={to} to={to} className="navbar-link" onClick={closeMobileMenu}>
+                        <NavLink
+                            key={to}
+                            to={to}
+                            end
+                            className={({ isActive }) =>
+                                `navbar-link${isActive ? ' active' : ''}`
+                            }
+                            onClick={closeMobileMenu}
+                        >
                             {label}
-                        </Link>
+                        </NavLink>
                     ))}
                 </div>
 
