@@ -15,7 +15,12 @@
 }
 
 .dashboard-header {
+    display: flex;
+    align-items: flex-start;
+    justify-content: space-between;
     margin-bottom: var(--space-2xl);
+    gap: var(--space-md);
+    flex-wrap: wrap;
 }
 
 .dashboard-header h1 {
@@ -29,6 +34,19 @@
 .dashboard-header p {
     color: var(--color-text-tertiary);
     font-size: var(--font-size-lg);
+}
+
+.dashboard-refresh {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-shrink: 0;
+}
+
+.last-refreshed {
+    font-size: var(--font-size-xs, 0.72rem);
+    opacity: 0.65;
+    white-space: nowrap;
 }
 
 .stats-grid {
@@ -77,6 +95,23 @@
     font-size: var(--font-size-2xl);
     font-weight: 800;
     color: var(--color-text-primary);
+}
+
+/* Realized / Unrealized P&L breakdown shown below the big number */
+.pnl-breakdown {
+    font-size: var(--font-size-xs, 0.72rem);
+    margin-top: 2px;
+    opacity: 0.75;
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+/* Small hint line below a stat value (e.g. "No open positions") */
+.stat-hint {
+    font-size: var(--font-size-xs, 0.72rem);
+    margin-top: 2px;
+    opacity: 0.65;
 }
 
 .dashboard-content {

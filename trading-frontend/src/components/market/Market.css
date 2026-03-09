@@ -52,7 +52,9 @@
 }
 
 @keyframes spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .search-box {
@@ -136,6 +138,25 @@
     text-align: center;
     padding: var(--space-2xl);
     color: var(--color-text-tertiary);
+}
+
+/* Live "X ago" freshness bar below the stock grid */
+.market-freshness {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-xl);
+    font-size: var(--font-size-sm);
+    color: var(--color-text-muted);
+    justify-content: center;
+    opacity: 0.75;
+}
+
+.last-updated {
+    font-size: var(--font-size-xs, 0.75rem);
+    display: flex;
+    align-items: center;
+    gap: 2px;
 }
 
 /* Modal Styles */

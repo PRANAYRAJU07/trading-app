@@ -3,7 +3,7 @@ import { useAuth } from '../../context/AuthContext';
 import stockService from '../../services/stockService';
 import tradingService from '../../services/tradingService';
 import toast from 'react-hot-toast';
-import { Search, TrendingUp, ShoppingCart, DollarSign, RefreshCw } from 'lucide-react';
+import { Search, TrendingUp, ShoppingCart, DollarSign, RefreshCw, Clock } from 'lucide-react';
 import './Market.css';
 
 const Market = () => {
@@ -16,6 +16,14 @@ const Market = () => {
     const [quantity, setQuantity] = useState(1);
     const [buyingStock, setBuyingStock] = useState(false);
     const [refreshingPrices, setRefreshingPrices] = useState(false);
+    const [lastFetchedAt, setLastFetchedAt] = useState(null);
+    const [, setTick] = useState(0); // forces re-render every second for live timestamps
+
+    // 1-second ticker so relative timestamps update live
+    useEffect(() => {
+        const tick = setInterval(() => setTick(t => t + 1), 1000);
+        return () => clearInterval(tick);
+    }, []);
 
     useEffect(() => {
         fetchStocks();
@@ -38,6 +46,7 @@ const Market = () => {
             if (response.success) {
                 setStocks(response.data || []);
                 setFilteredStocks(response.data || []);
+                setLastFetchedAt(new Date());
             }
         } catch (error) {
             toast.error('Failed to load stocks');
@@ -45,6 +54,21 @@ const Market = () => {
         } finally {
             setLoading(false);
         }
+    };
+
+    // Convert a date to a short relative string like "5s ago", "2m ago", "1h ago"
+    const timeAgo = (date) => {
+        if (!date) return 'Never';
+        const d = typeof date === 'string' ? new Date(date) : date;
+        if (isNaN(d)) return 'Unknown';
+        const diffMs = Date.now() - d.getTime();
+        const diffSec = Math.floor(diffMs / 1000);
+        if (diffSec < 5) return 'just now';
+        if (diffSec < 60) return `${diffSec}s ago`;
+        const diffMin = Math.floor(diffSec / 60);
+        if (diffMin < 60) return `${diffMin}m ago`;
+        const diffH = Math.floor(diffMin / 60);
+        return `${diffH}h ago`;
     };
 
     const handleRefreshPrices = async () => {
@@ -178,7 +202,10 @@ const Market = () => {
 
                         <div className="stock-card-body">
                             <h3>{stock.companyName}</h3>
-                            <p className="text-muted">Last updated: {new Date(stock.lastUpdated).toLocaleString()}</p>
+                            <p className="text-muted last-updated">
+                                <Clock size={11} style={{ marginRight: 3, verticalAlign: 'middle' }} />
+                                {timeAgo(stock.lastUpdated)}
+                            </p>
                         </div>
 
                         <div className="stock-card-footer">
@@ -197,6 +224,14 @@ const Market = () => {
             {filteredStocks.length === 0 && (
                 <div className="no-results">
                     <p>No stocks found matching "{searchTerm}"</p>
+                </div>
+            )}
+
+            {/* Price data freshness indicator */}
+            {lastFetchedAt && (
+                <div className="market-freshness text-muted">
+                    <Clock size={13} />
+                    Prices fetched {timeAgo(lastFetchedAt)} · auto-refreshes every 60s
                 </div>
             )}
 
