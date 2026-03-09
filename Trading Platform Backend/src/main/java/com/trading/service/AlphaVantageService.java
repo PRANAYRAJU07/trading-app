@@ -1,6 +1,6 @@
 package com.trading.service;
 
-import com.trading.dto.alphavantage.GlobalQuoteResponse;
+import com.fasterxml.jackson.databind.JsonNode;
 import com.trading.dto.alphavantage.StockPriceUpdate;
 import com.trading.entity.Stock;
 import com.trading.repository.StockRepository;
@@ -24,67 +24,95 @@ public class AlphaVantageService {
     private final WebClient alphaVantageWebClient;
     private final StockRepository stockRepository;
 
-    @Value("${alphavantage.api.key}")
+    @Value("${alphavantage.api.key:}")
     private String apiKey;
 
     @Value("${alphavantage.api.enabled:true}")
     private boolean apiEnabled;
 
     /**
-     * Fetch real-time stock quote from Alpha Vantage API
+     * Returns true only if Alpha Vantage is enabled AND the API key is configured.
+     */
+    private boolean isConfigured() {
+        return apiEnabled && apiKey != null && !apiKey.isBlank();
+    }
+
+    /**
+     * Fetch real-time stock quote from Alpha Vantage API.
+     * Returns null if not configured or on any error.
      */
     public StockPriceUpdate fetchStockQuote(String symbol) {
-        if (!apiEnabled) {
-            log.warn("Alpha Vantage API is disabled");
+        if (!isConfigured()) {
+            log.warn("Alpha Vantage: API key not set — skipping fetch for {}. " +
+                    "Set ALPHAVANTAGE_API_KEY env var on Render to enable.", symbol);
             return null;
         }
 
         try {
-            log.info("Fetching stock quote for: {}", symbol);
+            log.info("Alpha Vantage: fetching quote for {}", symbol);
 
-            GlobalQuoteResponse response = alphaVantageWebClient.get()
+            // Fetch as JsonNode first so we can log the "Information" field on errors
+            JsonNode rawNode = alphaVantageWebClient.get()
                     .uri(uriBuilder -> uriBuilder
                             .queryParam("function", "GLOBAL_QUOTE")
                             .queryParam("symbol", symbol)
                             .queryParam("apikey", apiKey)
                             .build())
                     .retrieve()
-                    .bodyToMono(GlobalQuoteResponse.class)
+                    .bodyToMono(JsonNode.class)
                     .block();
 
-            if (response == null || response.getGlobalQuote() == null) {
-                log.error("No data received from Alpha Vantage for symbol: {}", symbol);
+            if (rawNode == null) {
+                log.error("Alpha Vantage: null response for {}", symbol);
                 return null;
             }
 
-            GlobalQuoteResponse.GlobalQuote quote = response.getGlobalQuote();
-
-            // Check if the response contains valid data
-            if (quote.getPrice() == null || quote.getPrice().isEmpty()) {
-                log.error("Invalid stock symbol or no data: {}", symbol);
+            // Alpha Vantage returns {"Information": "..."} when rate-limited or key invalid
+            if (rawNode.has("Information")) {
+                log.error("Alpha Vantage API message for {}: {}", symbol,
+                        rawNode.path("Information").asText());
                 return null;
             }
+
+            // Also handle "Note" field (another Alpha Vantage rate-limit signal)
+            if (rawNode.has("Note")) {
+                log.warn("Alpha Vantage Note for {}: {}", symbol,
+                        rawNode.path("Note").asText());
+                return null;
+            }
+
+            JsonNode quoteNode = rawNode.path("Global Quote");
+            String price = quoteNode.path("05. price").asText(null);
+
+            if (price == null || price.isBlank()) {
+                log.error("Alpha Vantage: no price data for {}. Raw: {}", symbol, rawNode);
+                return null;
+            }
+
+            String prevClose = quoteNode.path("08. previous close").asText("0");
+            String change = quoteNode.path("09. change").asText("0");
+            String changePct = quoteNode.path("10. change percent").asText("0%");
 
             StockPriceUpdate update = new StockPriceUpdate();
-            update.setSymbol(quote.getSymbol());
-            update.setPrice(new BigDecimal(quote.getPrice()));
-            update.setPreviousClose(new BigDecimal(quote.getPreviousClose()));
-            update.setChange(new BigDecimal(quote.getChange()));
-            update.setChangePercent(quote.getChangePercent());
+            update.setSymbol(quoteNode.path("01. symbol").asText(symbol).toUpperCase());
+            update.setPrice(new BigDecimal(price));
+            update.setPreviousClose(new BigDecimal(prevClose));
+            update.setChange(new BigDecimal(change));
+            update.setChangePercent(changePct);
             update.setUpdatedAt(LocalDateTime.now());
             update.setSource("ALPHA_VANTAGE");
 
-            log.info("Successfully fetched price for {}: ${}", symbol, quote.getPrice());
+            log.info("Alpha Vantage: {} = ${}", symbol, price);
             return update;
 
         } catch (Exception e) {
-            log.error("Error fetching stock quote for {}: {}", symbol, e.getMessage());
+            log.error("Alpha Vantage: error fetching {}: {}", symbol, e.getMessage());
             return null;
         }
     }
 
     /**
-     * Update stock price in database
+     * Update a single stock price in the database.
      */
     @Transactional
     public boolean updateStockPrice(String symbol) {
@@ -92,7 +120,7 @@ public class AlphaVantageService {
             StockPriceUpdate priceUpdate = fetchStockQuote(symbol);
 
             if (priceUpdate == null) {
-                log.error("Failed to fetch price for: {}", symbol);
+                log.error("Alpha Vantage: failed to fetch price for {}", symbol);
                 return false;
             }
 
@@ -112,14 +140,20 @@ public class AlphaVantageService {
     }
 
     /**
-     * Update all stock prices
+     * Update all stock prices via Alpha Vantage (rate-limited: 12s between calls).
+     * Used as fallback when Yahoo Finance fails.
      */
     @Transactional
     public List<StockPriceUpdate> updateAllStockPrices() {
+        if (!isConfigured()) {
+            log.warn("Alpha Vantage: not configured, skipping batch update");
+            return new ArrayList<>();
+        }
+
         List<Stock> stocks = stockRepository.findAll();
         List<StockPriceUpdate> updates = new ArrayList<>();
 
-        log.info("Starting batch update for {} stocks", stocks.size());
+        log.info("Alpha Vantage: starting batch update for {} stocks", stocks.size());
 
         for (Stock stock : stocks) {
             try {
@@ -129,15 +163,15 @@ public class AlphaVantageService {
                     stock.setCurrentPrice(update.getPrice());
                     stockRepository.save(stock);
                     updates.add(update);
-
-                    // Rate limiting: wait 12 seconds between calls (5 calls per minute)
-                    Thread.sleep(12000);
                 } else {
-                    log.warn("Skipping update for {}", stock.getSymbol());
+                    log.warn("Alpha Vantage: skipping update for {}", stock.getSymbol());
                 }
 
+                // Rate limiting: 12s between calls (5 calls/min on free tier)
+                Thread.sleep(12000);
+
             } catch (InterruptedException e) {
-                log.error("Thread interrupted during batch update");
+                log.error("Thread interrupted during Alpha Vantage batch update");
                 Thread.currentThread().interrupt();
                 break;
             } catch (Exception e) {
@@ -145,13 +179,13 @@ public class AlphaVantageService {
             }
         }
 
-        log.info("Batch update completed. Updated {} out of {} stocks",
+        log.info("Alpha Vantage batch update: {}/{} stocks updated",
                 updates.size(), stocks.size());
         return updates;
     }
 
     /**
-     * Get stock price without updating database
+     * Get stock price without updating DB.
      */
     public StockPriceUpdate getStockPrice(String symbol) {
         return fetchStockQuote(symbol);
